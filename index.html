@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
   <title>UIL Spelling Coach</title>
   <meta name="description" content="Practice the 2026-2027 UIL A+ Spelling list with a spoken pronouncer, timed tests, missed-word review and printable PDF tests.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f5bd3'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='30' text-anchor='middle' fill='white'%3EAa%3C/text%3E%3C/svg%3E">
@@ -89,7 +90,7 @@
           <fieldset class="field">
             <legend>Mode</legend>
             <label class="radio"><input type="radio" name="mode" value="practice" checked>
-              <span><strong>Practice</strong> — buttons to repeat the word, hear a sentence, the meaning, or say it slowly.</span></label>
+              <span><strong>Practice</strong> — buttons to repeat the word, hear a sentence, the meaning, or say it slowly (tap again to go even slower).</span></label>
             <label class="radio"><input type="radio" name="mode" value="contest">
               <span><strong>Contest rules</strong> — like the real UIL test: the pronouncer says the word, a sentence and the word again, once. You can't ask for repeats.</span></label>
           </fieldset>
@@ -119,8 +120,9 @@
               <select id="voiceSel"><option value="">Loading voices…</option></select>
             </label>
             <label class="field">
-              <span>Speaking speed <output id="rateOut">0.9×</output></span>
-              <input type="range" id="rateRange" min="0.6" max="1.2" step="0.05" value="0.9">
+              <span>Speaking speed <output id="rateOut">0.75×</output></span>
+              <input type="range" id="rateRange" min="0.5" max="1.1" step="0.05" value="0.75">
+              <small class="muted">Slower is clearer. Each word is also said a little slower than the sentence around it.</small>
             </label>
             <button type="button" class="btn btn-ghost btn-sm" id="testVoiceBtn">🔊 Test voice</button>
             <p class="muted small" id="voiceWarn" hidden>Your browser has no speech voices. Try Chrome, Edge or Safari.</p>
@@ -151,7 +153,7 @@
           <button type="button" class="btn btn-tool" id="repeatBtn"><span aria-hidden="true">🔊</span> Say again</button>
           <button type="button" class="btn btn-tool" id="sentenceBtn"><span aria-hidden="true">💬</span> Use in a sentence</button>
           <button type="button" class="btn btn-tool" id="defBtn"><span aria-hidden="true">📖</span> Meaning</button>
-          <button type="button" class="btn btn-tool" id="slowBtn"><span aria-hidden="true">🐢</span> Say slowly</button>
+          <button type="button" class="btn btn-tool" id="slowBtn"><span aria-hidden="true">🐢</span> <span id="slowLbl">Say slowly</span></button>
           <button type="button" class="btn btn-tool" id="humanBtn" hidden><span aria-hidden="true">🎙️</span> Recorded voice</button>
         </div>
         <p class="contest-note" id="contestNote" hidden>Contest rules: the word is read once. Write your best spelling.</p>

@@ -129,15 +129,17 @@
   let speakToken = 0;
   let speakingNow = false;
   let audioEl = null;
-  const settings = Object.assign({ voice: '', rate: 0.9, grade: '34', count: '25', custom: 40, timer: 30, mode: 'practice', tb: false }, store.get('settings', {}));
+  const settings = Object.assign({ voice: '', rate: 0.75, grade: '34', count: '25', custom: 40, timer: 30, mode: 'practice', tb: false }, store.get('settings', {}));
+  if (!settings.v2) { settings.rate = 0.75; settings.v2 = true; store.set('settings', settings); } // slower default for everyone
   const saveSettings = () => store.set('settings', settings);
 
   function voiceScore(v) {
     let s = 0;
     if (/^en[-_]US/i.test(v.lang)) s += 30; else if (/^en/i.test(v.lang)) s += 15; else return -1;
-    if (/natural|neural|online/i.test(v.name)) s += 25;
+    if (/natural|neural|online|enhanced|premium/i.test(v.name)) s += 25;
     if (/google us english/i.test(v.name)) s += 20;
-    if (/samantha|aria|jenny|ava|allison|guy|zira/i.test(v.name)) s += 12;
+    if (/samantha|aria|jenny|ava|allison|guy|zira|evan|nathan|joelle|nicky|susan/i.test(v.name)) s += 12;
+    if (/compact|novelty|whisper|bad news|bells|boing|bubbles|cellos|zarvox|trinoids|organ|jester|superstar|wobble|albert|fred|junior|ralph|kathy|grandma|grandpa|rocko|shelley|flo|eddy|reed|sandy/i.test(v.name)) s -= 40;
     if (v.localService === false) s += 2;
     return s;
   }
@@ -176,14 +178,16 @@
       if (token !== speakToken) return;
       if (p && typeof p === 'object' && p.pause) { await sleep(p.pause); continue; }
       if (!p) continue;
+      const text = typeof p === 'object' ? p.t : p;
+      const partRate = typeof p === 'object' && p.r ? p.r : 1;
       await new Promise((resolve) => {
-        const u = new SpeechSynthesisUtterance(p);
+        const u = new SpeechSynthesisUtterance(text);
         const v = currentVoice();
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
-        u.rate = Math.max(0.4, settings.rate * rateMul);
+        u.rate = Math.max(0.3, settings.rate * rateMul * partRate);
         let done = false;
         const finish = () => { if (!done) { done = true; clearTimeout(safety); resolve(); } };
-        const safety = setTimeout(finish, 2500 + p.length * 110 / u.rate);
+        const safety = setTimeout(finish, 3000 + text.length * 120 / u.rate);
         u.onend = finish; u.onerror = finish;
         synth.speak(u);
       });
@@ -206,20 +210,24 @@
 
   // What the pronouncer says. Clarifiers from the list (e.g. "hare (rabbit)")
   // are always read so homonyms can't be confused, exactly as the rules require.
-  const clar = (d) => (d.c ? d.c : '');
+  // The word itself is always said a bit slower than the rest, with short
+  // pauses around it, so every sound is clear.
+  const W = (d, r = 0.85) => ({ t: d.s + '.', r });
   const script = {
     intro(d, k, mode) {
-      const parts = [`Number ${k}.`, { pause: 250 }, d.s + '.'];
-      if (d.c) parts.push(d.c + '.');
+      const parts = [`Number ${k}.`, { pause: 500 }, W(d)];
+      if (d.c) parts.push({ pause: 200 }, d.c + '.');
       if (mode === 'contest') {
-        parts.push({ pause: 300 }, d.x ? d.x : (d.def ? `It means: ${d.def}` : ''));
+        parts.push({ pause: 500 }, d.x ? d.x : (d.def ? `It means: ${d.def}` : ''));
       }
-      parts.push({ pause: 300 }, d.s + '.');
+      parts.push({ pause: 600 }, W(d));
       return parts;
     },
-    repeat: (d) => [d.s + '.', clar(d) ? clar(d) + '.' : '', { pause: 400 }, d.s + '.'],
-    sentence: (d) => [d.s + '.', { pause: 300 }, d.x || (d.def ? `It means: ${d.def}` : `Please spell ${d.s}.`), { pause: 300 }, d.s + '.'],
-    def: (d) => [d.s + '.', { pause: 250 }, d.p ? d.p + '.' : '', d.def ? d.def : 'Sorry, no meaning is available for this word.', { pause: 300 }, d.s + '.'],
+    repeat: (d) => [W(d), d.c ? d.c + '.' : '', { pause: 600 }, W(d)],
+    sentence: (d) => [W(d), { pause: 400 }, d.x || (d.def ? `It means: ${d.def}` : `Please spell ${d.s}.`), { pause: 500 }, W(d)],
+    def: (d) => [W(d), { pause: 400 }, d.p ? d.p + '.' : '', d.def ? d.def : 'Sorry, no meaning is available for this word.', { pause: 500 }, W(d)],
+    // Each tap of "Say slowly" goes slower: 60%, 50%, 40%, then stays at 40%.
+    slow: (d, level) => { const r = [0.6, 0.5, 0.4][Math.min(level, 2)]; return [W(d, r), { pause: 900 }, W(d, r)]; },
   };
 
   // ---------------------------------------------------------------- views ---
@@ -293,7 +301,7 @@
   });
   $('#voiceSel').addEventListener('change', (e) => { settings.voice = e.target.value; saveSettings(); });
   $('#rateRange').addEventListener('input', (e) => { settings.rate = parseFloat(e.target.value); $('#rateOut').textContent = settings.rate + '×'; saveSettings(); });
-  $('#testVoiceBtn').addEventListener('click', () => speak(['Hello! I will be your pronouncer today. Number one. Practice. Practice.']));
+  $('#testVoiceBtn').addEventListener('click', () => speak(['Hello! I will be your pronouncer today.', { pause: 400 }, 'Number one.', { pause: 500 }, { t: 'Practice.', r: 0.85 }, { pause: 600 }, { t: 'Practice.', r: 0.85 }]));
 
   $('#setupForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -359,6 +367,7 @@
     $('#progressBar').style.width = (test.idx / test.items.length) * 100 + '%';
     $('#answer').value = '';
     $('#humanBtn').hidden = !d.a;
+    slowLevel = 0; $('#slowLbl').textContent = 'Say slowly';
     timerLeft = test.timer; renderTimer();
     $('#testStatus').textContent = 'Listen…';
     $('#answer').focus({ preventScroll: true });
@@ -393,7 +402,12 @@
   $('#repeatBtn').addEventListener('click', () => speak(script.repeat(word())));
   $('#sentenceBtn').addEventListener('click', () => speak(script.sentence(word())));
   $('#defBtn').addEventListener('click', () => speak(script.def(word())));
-  $('#slowBtn').addEventListener('click', () => { const d = word(); speak([d.s + '.', { pause: 600 }, d.s + '.'], 0.6); });
+  let slowLevel = 0;
+  $('#slowBtn').addEventListener('click', () => {
+    speak(script.slow(word(), slowLevel));
+    slowLevel++;
+    $('#slowLbl').textContent = 'Even slower';
+  });
   $('#humanBtn').addEventListener('click', () => { const d = word(); if (d.a) playRecording(d.a); });
   $$('#helpers button').forEach((b) => b.addEventListener('click', () => setTimeout(() => $('#answer').focus({ preventScroll: true }), 50)));
 
@@ -474,7 +488,7 @@
           <div class="word">${esc(d.w.join(', '))}${d.n0 ? ` <span class="tag">(${esc(d.n0)})</span>` : ''}</div>
           ${it.ok ? '' : `<div class="yours">You wrote: ${answer ? `<s>${esc(answer)}</s>` : '<em>(blank)</em>'}${it.tu ? ' · <span class="tag">time ran out</span>' : ''}</div>${it.why ? `<div class="why">${esc(it.why)}</div>` : ''}`}
         </div>
-        <button class="icon-btn" data-say="${esc(it.id)}" aria-label="Hear this word">🔊</button>
+        <span class="row" style="flex-wrap:nowrap;gap:.35rem"><button class="icon-btn" data-say="${esc(it.id)}" aria-label="Hear this word">🔊</button><button class="icon-btn" data-slow="${esc(it.id)}" aria-label="Hear this word slowly">🐢</button></span>
       </li>`;
     }).join('');
     $('#onlyWrong').checked = false; $('#resList').parentElement.classList.remove('only-wrong');
@@ -483,8 +497,10 @@
     speak(misses === 0 ? ['Perfect score! Great job!'] : [`You spelled ${score} out of ${total} correctly.`]);
   }
   $('#resList').addEventListener('click', (e) => {
+    const slow = e.target.closest('[data-slow]');
+    if (slow) { const d = BY_ID.get(slow.dataset.slow); speak(script.slow(d, 0)); return; }
     const b = e.target.closest('[data-say]'); if (!b) return;
-    const d = BY_ID.get(b.dataset.say); speak([d.s + '.', d.x || '']);
+    const d = BY_ID.get(b.dataset.say); speak([W(d), { pause: 400 }, d.x || '']);
   });
   $('#onlyWrong').addEventListener('change', (e) => $('#resList').parentElement.classList.toggle('only-wrong', e.target.checked));
   $('#resPracticeMissed').addEventListener('click', () => {
