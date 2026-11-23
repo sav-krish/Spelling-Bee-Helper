@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UIL Spelling Coach</title>
+  <meta name="description" content="Practice the 2026-2027 UIL A+ Spelling list with a spoken pronouncer, timed tests, missed-word review and printable PDF tests.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f5bd3'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='30' text-anchor='middle' fill='white'%3EAa%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <button class="brand" data-nav="home" aria-label="Go to home">
+        <span class="logo" aria-hidden="true">Aa</span>
+        <span><strong>UIL Spelling Coach</strong><small>2026–2027 A+ list</small></span>
+      </button>
+      <nav class="nav" aria-label="Main">
+        <button data-nav="home">Practice</button>
+        <button data-nav="missed">Missed <span class="pill" id="navMissed">0</span></button>
+        <button data-nav="pdf">Print PDF</button>
+        <button data-nav="history">History</button>
+        <button data-nav="rules">Rules</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+
+    <!-- ============ HOME / SETUP ============ -->
+    <section id="view-home" class="view" aria-labelledby="homeTitle">
+      <div id="resumeBanner" class="banner" hidden>
+        <span>You have an unfinished test.</span>
+        <span class="row">
+          <button class="btn btn-primary btn-sm" id="resumeBtn">Resume</button>
+          <button class="btn btn-ghost btn-sm" id="discardBtn">Discard</button>
+        </span>
+      </div>
+
+      <div class="hero">
+        <h1 id="homeTitle">Ready to practice?</h1>
+        <p class="muted">The pronouncer reads each word out loud. Type what you hear. You'll see what you got right only at the very end — just like the real contest.</p>
+      </div>
+
+      <div class="grid-2">
+        <form class="card" id="setupForm" autocomplete="off">
+          <h2>Start a test</h2>
+
+          <label class="field">
+            <span>Grade division</span>
+            <select id="gradeSel">
+              <option value="34">Grades 3–4 (600 words)</option>
+              <option value="56">Grades 5–6 (800 words)</option>
+              <option value="78">Grades 7–8 (900 words)</option>
+              <option value="all">All grades (2,300 words)</option>
+            </select>
+          </label>
+
+          <div class="field">
+            <span id="countLbl">How many words?</span>
+            <div class="chips" role="radiogroup" aria-labelledby="countLbl" id="countChips">
+              <button type="button" class="chip" data-count="10">10</button>
+              <button type="button" class="chip" data-count="25">25</button>
+              <button type="button" class="chip" data-count="contest" id="contestChip">Contest (50)</button>
+              <button type="button" class="chip" data-count="custom">Custom</button>
+            </div>
+            <input type="number" id="customCount" min="1" max="2300" value="40" class="input-sm" hidden aria-label="Custom number of words">
+          </div>
+
+          <label class="check">
+            <input type="checkbox" id="tbChk">
+            <span>Add the tie breaker round after the test (<span id="tbCount">15</span> words)</span>
+          </label>
+
+          <label class="field">
+            <span>Time for each word</span>
+            <select id="timerSel">
+              <option value="0">No timer</option>
+              <option value="15">15 seconds</option>
+              <option value="20">20 seconds</option>
+              <option value="30" selected>30 seconds (recommended)</option>
+              <option value="45">45 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+            <small class="muted">The clock starts after the pronouncer finishes talking and pauses whenever a word is being read aloud.</small>
+          </label>
+
+          <fieldset class="field">
+            <legend>Mode</legend>
+            <label class="radio"><input type="radio" name="mode" value="practice" checked>
+              <span><strong>Practice</strong> — buttons to repeat the word, hear a sentence, the meaning, or say it slowly.</span></label>
+            <label class="radio"><input type="radio" name="mode" value="contest">
+              <span><strong>Contest rules</strong> — like the real UIL test: the pronouncer says the word, a sentence and the word again, once. You can't ask for repeats.</span></label>
+          </fieldset>
+
+          <button class="btn btn-primary btn-lg" type="submit" id="startBtn">Start test</button>
+          <p class="muted small" id="cycleNote"></p>
+        </form>
+
+        <div class="stack">
+          <div class="card">
+            <h2>Missed words</h2>
+            <p class="big-number"><span id="missedCount">0</span><small> words to review</small></p>
+            <p class="muted small">Words you spell wrong are saved here. Spell one right later and it leaves the list.</p>
+            <button class="btn btn-secondary" id="practiceMissedBtn">Practice missed words</button>
+          </div>
+
+          <div class="card">
+            <h2>Word coverage</h2>
+            <p class="muted small">Tests draw from a shuffled deck so every word comes up before any word repeats.</p>
+            <div id="coverage"></div>
+          </div>
+
+          <div class="card">
+            <h2>Voice</h2>
+            <label class="field">
+              <span>Pronouncer voice</span>
+              <select id="voiceSel"><option value="">Loading voices…</option></select>
+            </label>
+            <label class="field">
+              <span>Speaking speed <output id="rateOut">0.9×</output></span>
+              <input type="range" id="rateRange" min="0.6" max="1.2" step="0.05" value="0.9">
+            </label>
+            <button type="button" class="btn btn-ghost btn-sm" id="testVoiceBtn">🔊 Test voice</button>
+            <p class="muted small" id="voiceWarn" hidden>Your browser has no speech voices. Try Chrome, Edge or Safari.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TEST ============ -->
+    <section id="view-test" class="view" hidden aria-labelledby="testTitle">
+      <div class="test-head">
+        <div>
+          <p class="eyebrow" id="testRound">Test</p>
+          <h1 id="testTitle" class="test-count">Word <span id="qNum">1</span> <span class="muted">of <span id="qTotal">10</span></span></h1>
+        </div>
+        <div class="timer" id="timer" role="timer" aria-label="Time left">
+          <svg viewBox="0 0 44 44" aria-hidden="true"><circle class="track" cx="22" cy="22" r="19"/><circle class="bar" id="timerBar" cx="22" cy="22" r="19"/></svg>
+          <span id="timerText">30</span>
+        </div>
+      </div>
+      <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+
+      <div class="card test-card">
+        <div class="speaking" id="speaking" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <p class="status" id="testStatus" aria-live="polite">Listen…</p>
+
+        <div class="helpers" id="helpers">
+          <button type="button" class="btn btn-tool" id="repeatBtn"><span aria-hidden="true">🔊</span> Say again</button>
+          <button type="button" class="btn btn-tool" id="sentenceBtn"><span aria-hidden="true">💬</span> Use in a sentence</button>
+          <button type="button" class="btn btn-tool" id="defBtn"><span aria-hidden="true">📖</span> Meaning</button>
+          <button type="button" class="btn btn-tool" id="slowBtn"><span aria-hidden="true">🐢</span> Say slowly</button>
+          <button type="button" class="btn btn-tool" id="humanBtn" hidden><span aria-hidden="true">🎙️</span> Recorded voice</button>
+        </div>
+        <p class="contest-note" id="contestNote" hidden>Contest rules: the word is read once. Write your best spelling.</p>
+
+        <form id="answerForm" autocomplete="off">
+          <label for="answer" class="sr-only">Type the spelling</label>
+          <input id="answer" class="answer" type="text" name="spelling-entry"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                 data-gramm="false" data-lpignore="true" data-1p-ignore
+                 placeholder="Type the spelling here" enterkeyhint="next">
+          <div class="row answer-actions">
+            <button type="button" class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
+            <button type="submit" class="btn btn-primary btn-lg" id="nextBtn">Next word →</button>
+          </div>
+        </form>
+        <p class="muted small center">Press <kbd>Enter</kbd> for the next word. Capital letters, hyphens and apostrophes count, just like in the contest.</p>
+      </div>
+      <div class="center"><button class="btn btn-link" id="quitBtn">End test early</button></div>
+
+      <div class="overlay" id="pauseOverlay" hidden>
+        <div class="card center">
+          <h2>Paused</h2>
+          <p class="muted">The timer is stopped.</p>
+          <button class="btn btn-primary btn-lg" id="resumeTestBtn">Keep going</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section id="view-results" class="view" hidden aria-labelledby="resTitle">
+      <div class="card result-hero">
+        <p class="eyebrow">Test complete</p>
+        <h1 id="resTitle"><span id="resScore">0</span> <span class="muted">/ <span id="resTotal">0</span></span></h1>
+        <p id="resMsg" class="lead"></p>
+        <p id="resTb" class="muted"></p>
+        <div class="row center-row">
+          <button class="btn btn-primary" id="resPracticeMissed">Practice the ones I missed</button>
+          <button class="btn btn-secondary" id="resAgain">New test</button>
+          <button class="btn btn-ghost" id="resPdf">Print this set</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row space">
+          <h2>Your answers</h2>
+          <label class="check"><input type="checkbox" id="onlyWrong"> <span>Show only misses</span></label>
+        </div>
+        <ol class="results" id="resList"></ol>
+      </div>
+    </section>
+
+    <!-- ============ MISSED ============ -->
+    <section id="view-missed" class="view" hidden aria-labelledby="missTitle">
+      <h1 id="missTitle">Missed words</h1>
+      <p class="muted">Every word you misspell lands here. Practice them until the list is empty.</p>
+      <div class="card">
+        <div class="row space wrap-row">
+          <label class="field inline">
+            <span>Grade</span>
+            <select id="missGrade">
+              <option value="all">All grades</option>
+              <option value="34">Grades 3–4</option>
+              <option value="56">Grades 5–6</option>
+              <option value="78">Grades 7–8</option>
+            </select>
+          </label>
+          <div class="row">
+            <button class="btn btn-primary" id="missStart">Practice these</button>
+            <button class="btn btn-ghost" id="missPdf">Print as PDF</button>
+          </div>
+        </div>
+        <p id="missSummary" class="lead"></p>
+        <details class="reveal">
+          <summary>Show the list to study (don't peek before a practice round!)</summary>
+          <ul class="miss-list" id="missList"></ul>
+          <button class="btn btn-link danger" id="missClear">Clear all missed words</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ PDF ============ -->
+    <section id="view-pdf" class="view" hidden aria-labelledby="pdfTitle">
+      <h1 id="pdfTitle">Print a paper test</h1>
+      <p class="muted">Makes a PDF with a <strong>pronouncer's list</strong> for the grown-up (word, meaning and a sentence) and a separate <strong>answer sheet</strong> for the student.</p>
+      <form class="card" id="pdfForm" autocomplete="off">
+        <div class="grid-2 tight">
+          <label class="field">
+            <span>Words from</span>
+            <select id="pdfSource">
+              <option value="new">A new random set</option>
+              <option value="missed">My missed words</option>
+              <option value="last">The last test I took</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Grade division</span>
+            <select id="pdfGrade">
+              <option value="34">Grades 3–4</option>
+              <option value="56">Grades 5–6</option>
+              <option value="78">Grades 7–8</option>
+              <option value="all">All grades</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Number of words</span>
+            <input type="number" id="pdfCount" min="1" max="2300" value="50">
+          </label>
+          <label class="field">
+            <span>Tie breaker words (0 for none)</span>
+            <input type="number" id="pdfTb" min="0" max="100" value="15">
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="pdfDefs" checked> <span>Include meanings and sentences on the pronouncer's list</span></label>
+        <label class="check"><input type="checkbox" id="pdfSheet" checked> <span>Include a blank numbered answer sheet</span></label>
+        <button class="btn btn-primary btn-lg" type="submit">Download PDF</button>
+        <p class="muted small" id="pdfNote"></p>
+      </form>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section id="view-history" class="view" hidden aria-labelledby="histTitle">
+      <h1 id="histTitle">History</h1>
+      <div class="card">
+        <table class="table" id="histTable">
+          <thead><tr><th>Date</th><th>Grades</th><th>Mode</th><th>Score</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="muted" id="histEmpty">No tests yet.</p>
+      </div>
+      <div class="card">
+        <h2>Saved data</h2>
+        <p class="muted small">Everything is saved in this browser only — no account needed. Clearing site data erases it.</p>
+        <button class="btn btn-link danger" id="resetAll">Reset all progress</button>
+      </div>
+    </section>
+
+    <!-- ============ RULES ============ -->
+    <section id="view-rules" class="view prose" hidden aria-labelledby="rulesTitle">
+      <h1 id="rulesTitle">UIL Spelling rules (Section 1470)</h1>
+      <p class="muted">A summary for students and parents. The official Constitution and Contest Rules win if anything differs.</p>
+
+      <div class="card">
+        <h2>The contest</h2>
+        <ul>
+          <li>Designed to expose students to a wide variety of vocabulary — not a memorization contest.</li>
+          <li>Words come from the UIL list, state-adopted textbooks and words of common usage. About <strong>20%</strong> of test words are <em>not</em> on the UIL list.</li>
+          <li>The authority for all words is <strong>Merriam-Webster's Intermediate Dictionary</strong>.</li>
+          <li>Students write the words given by the pronouncer at about <strong>five words per minute</strong>.</li>
+        </ul>
+        <table class="table">
+          <thead><tr><th>Division</th><th>Test</th><th>Tie breaker</th><th>Approx. length</th></tr></thead>
+          <tbody>
+            <tr><td>Grades 3 &amp; 4</td><td>50 words</td><td>15 words</td><td>30 min</td></tr>
+            <tr><td>Grades 5 &amp; 6</td><td>80 words</td><td>20 words</td><td>45 min</td></tr>
+            <tr><td>Grades 7 &amp; 8</td><td>110 words</td><td>30 words</td><td>60 min</td></tr>
+          </tbody>
+        </table>
+        <p>The tie breaker is given to all contestants right after the test. <strong>Students who don't take the tie breaker are disqualified.</strong></p>
+      </div>
+
+      <div class="card">
+        <h2>What counts as a miss</h2>
+        <ul>
+          <li>Any misspelled word — one point is deducted for each.</li>
+          <li>A mistake in <strong>capitalization</strong>, or misuse of an <strong>apostrophe</strong> or <strong>hyphen</strong>.</li>
+          <li>Any word the student leaves out (blank).</li>
+          <li>Where the list shows two spellings (like <em>nosy, nosey</em>), either one is correct. A word listed only in lowercase must be lowercase; one listed only with a capital must be capitalized.</li>
+        </ul>
+        <p>Printing or cursive are both fine; a letter counts if it can be identified on its own. In this app, your typed answer is checked exactly — capitals, hyphens, spaces and apostrophes included. (Accent marks like the é in <em>éclair</em> are optional when typing.)</p>
+      </div>
+
+      <div class="card">
+        <h2>The pronouncer</h2>
+        <ul>
+          <li>Pronounces words in order, distinguishing homonyms (for example “bass drum” vs. “base”).</li>
+          <li>May give a sentence and/or definition for clarification.</li>
+          <li>Students <strong>may not ask</strong> for a word to be repeated or for a sentence — the pronouncer decides that beforehand. Choose <em>Contest rules</em> mode to practice this way.</li>
+          <li>After all words are read, the pronouncer and verifier re-pronounce any words in question.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Scoring &amp; ties</h2>
+        <ul>
+          <li>Highest score is first place, and so on through sixth.</li>
+          <li>Ties are broken by scoring the tie breaker of only those tied. If still tied, the tie stands. A tie for first means no second place, etc.</li>
+          <li>Students who score 100% at district get a Certificate of Achievement. Tie breaker misses don't count against it.</li>
+          <li>Team score = the combined scores of a school's three contestants (tie breaker only if teams are tied).</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer muted small">
+    Unofficial practice tool for the 2026–2027 UIL A+ Spelling list. Definitions and some sentences come from the free Dictionary API (Wiktionary, CC BY-SA). Progress is saved only on this device.
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/jspdf.umd.min.js" defer></script>
+  <script src="js/data.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
